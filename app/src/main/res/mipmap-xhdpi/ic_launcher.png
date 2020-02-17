@@ -1,0 +1,141 @@
+package com.lampa.eyesmart.services;
+
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.util.Log;
+
+import com.lampa.eyesmart.activities.watch.FindActivity;
+import com.lampa.eyesmart.activities.ShadowActivity;
+import com.lampa.objects.BlueObject;
+import com.lampa.eyesmart.activities.watch.CallActivity;
+import com.lampa.eyesmart.activities.watch.OrderActivity;
+import com.lampa.eyesmart.activities.watch.PatrolActivity;
+import com.lampa.eyesmart.components.Filters;
+import com.lampa.objects.HeartObject;
+import com.lampa.objects.TaskObject;
+
+import java.util.Date;
+
+import app.akexorcist.bluetotohspp.library.BluetoothSPP;
+
+/**
+ * Created by User on 26.02.2018.
+ */
+public class WatchService extends BaseService implements SensorEventListener, BluetoothSPP.BluetoothConnectionListener, BluetoothSPP.OnDataReceivedListener {
+    public static final String TAG = "WatchService";
+    private ServiceReceiver serviceReceiver = new ServiceReceiver();
+    private Date lastSensorValue = new Date();
+    /**
+     *
+     */
+    @Override
+    public void onCreate() {
+        super.onCreate();
+
+        SensorManager sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+
+        Sensor mHeartRateSensor = sensorManager.getDefaultSensor(Sensor.TYPE_HEART_RATE);
+        sensorManager.registerListener(this, mHeartRateSensor, SensorManager.SENSOR_DELAY_NORMAL);
+
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(Filters.ACTION_RESULT_CALL);
+        intentFilter.addAction(Filters.ACTION_RESULT_ORDER);
+        intentFilter.addAction(Filters.ACTION_RESULT_PATROL);
+        registerReceiver(serviceReceiver, intentFilter);
+
+
+        /**
+         *
+         */
+        if(bluetoothSPP != null) {
+            bluetoothSPP.setOnDataReceivedListener(this);
+            bluetoothSPP.setBluetoothConnectionListener(this);
+
+            connectToBT();
+        }
+
+        // echo thread
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while(true) {
+                    try {
+                        if(BT_CONNECT) {
+                            if(System.currentTimeMillis() - lastMessage > 11000) {
+                                bluetoothSPP.disconnect();
+                                lastMessage = System.currentTimeMillis();
+                            }
+                        }
+
+                        Thread.sleep(10000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }).start();
+
+
+        IntentFilter bluefilter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
+        bluefilter.addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED);
+        bluefilter.addAction(BluetoothDevice.ACTION_ACL_CONNECTED);
+        bluefilter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED);
+        registerReceiver(blueReceiver, bluefilter);
+    }
+
+    @Override
+    public void onDeviceConnected(String name, String address) {
+        super.onDeviceConnected(name, address);
+
+        bluetoothSPP.send(BluetoothSPP.objectToBytes(new BlueObject()), true);
+    }
+
+    @Override
+    public void onDeviceDisconnected() {
+        super.onDeviceDisconnected();
+
+        connectToBT();
+    }
+
+    @Override
+    public void onDeviceConnectionFailed() {
+        super.onDeviceConnectionFailed();
+
+        connectToBT();
+    }
+
+    /**
+     *
+     * @param event
+     */
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        if(new Date().getTime() - lastSensorValue.getTime() < 1000 * 30) {
+            return;
+        }
+
+        lastSensorValue = new Date();
+
+        HeartObject heartObject = new HeartObject();
+        heartObject.setDate(new Date());
+        heartObject.setRate(Math.round(event.values[0]));
+
+        BlueObject blueObject = new BlueObject();
+        blueObject.setData(heartObject);
+        blueObject.setType(BLUETOOTH_INFO_HEART_RATE);
+
+        bluetoothSPP.send(BluetoothSPP.objectToBytes(blueObject), true);
+
+        Log.i(TAG, "heart rate: " + heartObject.getRate());
+    }
+
+    /**
+     
