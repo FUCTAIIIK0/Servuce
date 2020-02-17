@@ -32,6 +32,24 @@
             android:layout_height="wrap_content"
             android:text="stop Service" />
 
+        <TextView
+            android:id="@+id/textView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="" />
+
+        <Button
+            android:id="@+id/main_bindService"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="bind" />
+
+        <Button
+            android:id="@+id/main_unbindService"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="unbind" />
+
     </LinearLayout>
 
 </RelativeLayout>

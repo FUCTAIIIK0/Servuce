@@ -9,11 +9,12 @@ import androidx.annotation.Nullable;
 
 
 public class MyService extends Service {
-    private String TAG ="Service";
+    private String TAG = "Service";
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "onStartCommand: ");
+        someTask();
         return super.onStartCommand(intent, flags, startId);
     }
 
@@ -27,7 +28,7 @@ public class MyService extends Service {
     public boolean onUnbind(Intent intent) {
         Log.d(TAG, "onUnbind: ");
         return super.onUnbind(intent);
-        
+
     }
 
     @Override
@@ -41,5 +42,35 @@ public class MyService extends Service {
     public IBinder onBind(Intent intent) {
         Log.d(TAG, "onBind: ");
         return null;
+    }
+
+
+
+
+
+    void someTask() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                for (int temp = 100; temp > 0; temp--) {
+                    Log.d(TAG, "run: " + temp);
+
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+
+                    if (temp == 1) {
+
+                        // остановка сервиса
+                        stopSelf();
+                    }
+                }
+            }
+        }).start();
+
+
     }
 }

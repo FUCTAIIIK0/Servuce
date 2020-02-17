@@ -17,6 +17,12 @@ public class MainActivity extends AppCompatActivity {
     @BindView(R.id.main_stopService)
     Button stopServiceBtn;
 
+    @BindView(R.id.main_bindService)
+    Button bindBtn;
+
+    @BindView(R.id.main_unbindService)
+    Button unbindBtn;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -32,6 +38,9 @@ public class MainActivity extends AppCompatActivity {
             stopService();
         });
     }
+
+
+
 
     void startService(){
         startService(new Intent(this,MyService.class));
